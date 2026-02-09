@@ -3,7 +3,6 @@ import { ConfigService, PlatformService } from 'terminus-core'
 import { ToastrService } from 'ngx-toastr'
 import { Connection, getGist, syncGist } from 'api';
 import { PasswordStorageService } from 'services/PasswordStorage.service';
-import CryptoJS from 'crypto-js'
 import * as yaml from 'js-yaml'
 import { GistFile } from 'gist/Gist';
 
@@ -49,7 +48,7 @@ export class SyncConfigSettingsTabComponent implements OnInit {
 
     async sync(isUploading: boolean): Promise<void> {
 
-        const { baseUrl, token, gist, encryption } = this.config.store.syncConfig;
+        const { baseUrl, token, gist } = this.config.store.syncConfig;
         const selfConfig = JSON.parse(JSON.stringify(this.config.store.syncConfig));
 
         if (!token) {
@@ -80,7 +79,7 @@ export class SyncConfigSettingsTabComponent implements OnInit {
                 files.push(new GistFile('config.yaml', yaml.dump(store)));
 
                 // ssh password
-                files.push(new GistFile('ssh.auth.json', JSON.stringify(await this.getSSHPluginAllPasswordInfos(token))));
+                files.push(new GistFile('ssh.auth.json', JSON.stringify(await this.getSSHPluginAllPasswordInfos())));
 
                 this.config.store.syncConfig.gist = await syncGist(token, baseUrl, gist, files);
 
@@ -101,7 +100,7 @@ export class SyncConfigSettingsTabComponent implements OnInit {
                 }
 
                 if (result.has('ssh.auth.json')) {
-                    await this.saveSSHPluginAllPasswordInfos(JSON.parse(result.get('ssh.auth.json').content) as Connection[], token);
+                    await this.saveSSHPluginAllPasswordInfos(JSON.parse(result.get('ssh.auth.json').content) as Connection[]);
                 }
 
             }
@@ -127,13 +126,10 @@ export class SyncConfigSettingsTabComponent implements OnInit {
         this.platform.openExternal(this.config.store.syncConfig.baseUrl + '/' + this.config.store.syncConfig.gist);
     }
 
-    async saveSSHPluginAllPasswordInfos(conns: Connection[], token: string) {
+    async saveSSHPluginAllPasswordInfos(conns: Connection[]) {
         if (conns.length < 1) return;
         for (const conn of conns) {
             try {
-                if (conn.auth !== null && conn.auth.encryptType && conn.auth.encryptType === 'AES') {
-                    conn.auth.password = this.aesDecrypt(conn.auth.password, token);
-                }
                 await this.passwordStorage.savePassword(conn)
             } catch (error) {
                 console.error(conn, error);
@@ -142,7 +138,7 @@ export class SyncConfigSettingsTabComponent implements OnInit {
 
     }
 
-    getSSHPluginAllPasswordInfos(token: string): Promise<Connection[]> {
+    getSSHPluginAllPasswordInfos(): Promise<Connection[]> {
         return new Promise(async (resolve) => {
 
             const store = this.config.store
@@ -162,8 +158,6 @@ export class SyncConfigSettingsTabComponent implements OnInit {
                 return;
             }
 
-            const isEncrypt = store.syncConfig.encryption === true;
-
             const infos = [];
             for (const connect of connections) {
                 try {
@@ -173,8 +167,8 @@ export class SyncConfigSettingsTabComponent implements OnInit {
                     infos.push({
                         host, port, user,
                         auth: {
-                            password: isEncrypt ? this.aesEncrypt(pwd.toString(), token) : pwd,
-                            encryptType: isEncrypt ? 'AES' : 'NONE'
+                            password: pwd,
+                            encryptType: 'NONE'
                         }
                     });
                 } catch (error) {
@@ -188,34 +182,4 @@ export class SyncConfigSettingsTabComponent implements OnInit {
 
 
     }
-
-    /* AES Begin http://www.kt5.cn/fe/2019/12/12/cryptojs-aes-128-bit-ecrypt-decrypt/ */
-
-    aesEncrypt(str: string, token: string) {
-        const k = this.getEncKey(token);
-        const formatedKey = CryptoJS.enc.Utf8.parse(k)
-        const formatedIv = CryptoJS.enc.Utf8.parse(k)
-        const encrypted = CryptoJS.AES.encrypt(str, formatedKey, { iv: formatedIv, mode: CryptoJS.mode.CBC, padding: CryptoJS.pad.Pkcs7 })
-        return encrypted.ciphertext.toString()
-    }
-
-    aesDecrypt(encryptedStr: string, token: string) {
-        const encryptedHexStr = CryptoJS.enc.Hex.parse(encryptedStr)
-        const encryptedBase64Str = CryptoJS.enc.Base64.stringify(encryptedHexStr)
-        const k = this.getEncKey(token);
-        const formatedKey = CryptoJS.enc.Utf8.parse(k)
-        const formatedIv = CryptoJS.enc.Utf8.parse(k)
-        const decryptedData = CryptoJS.AES.decrypt(encryptedBase64Str, formatedKey, { iv: formatedIv, mode: CryptoJS.mode.CBC, padding: CryptoJS.pad.Pkcs7 })
-        return decryptedData.toString(CryptoJS.enc.Utf8)
-    }
-
-    getEncKey(token: string): string {
-        const diff = 16 - token.length;
-        if (diff < 0) {
-            return token.substr(0, 16);
-        }
-        return token + Array(diff + 1).join('0');
-    }
-
-    /* AES End */
 }

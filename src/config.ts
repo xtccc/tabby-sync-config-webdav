@@ -6,8 +6,7 @@ export class SyncConfigProvider extends ConfigProvider {
             baseUrl: '',
             token: '',
             gist: '',
-            lastSyncTime: '-',
-            encryption: false
+            lastSyncTime: '-'
         }
     }
 }
