@@ -6,7 +6,6 @@ import { PasswordStorageService } from 'services/PasswordStorage.service';
 import CryptoJS from 'crypto-js'
 import * as yaml from 'js-yaml'
 import { GistFile } from 'gist/Gist';
-import GitLab from 'gist/GitLab';
 
 /** @hidden */
 @Component({
@@ -50,7 +49,7 @@ export class SyncConfigSettingsTabComponent implements OnInit {
 
     async sync(isUploading: boolean): Promise<void> {
 
-        const { type,baseUrl, token, gist, encryption } = this.config.store.syncConfig;
+        const { baseUrl, token, gist, encryption } = this.config.store.syncConfig;
         const selfConfig = JSON.parse(JSON.stringify(this.config.store.syncConfig));
 
         if (!token) {
@@ -83,26 +82,26 @@ export class SyncConfigSettingsTabComponent implements OnInit {
                 // ssh password
                 files.push(new GistFile('ssh.auth.json', JSON.stringify(await this.getSSHPluginAllPasswordInfos(token))));
 
-                this.config.store.syncConfig.gist = await syncGist(type, token, baseUrl, gist, files);
+                this.config.store.syncConfig.gist = await syncGist(token, baseUrl, gist, files);
 
             } else {
 
-                const result = await getGist(type, token, baseUrl, gist);
+                const result = await getGist(token, baseUrl, gist);
 
                 if (result.has('config.yaml')) {
-                    const config = yaml.load(result.get('config.yaml').value) as any;
+                    const config = yaml.load(result.get('config.yaml').content) as any;
                     config.syncConfig = selfConfig;
                     this.config.writeRaw(yaml.dump(config));
                 }
                 // Maintain a check for `config.json` for backwards-compatibility.
                 else if (result.has('config.json')) {
-                    const config = yaml.load(result.get('config.json').value) as any;
+                    const config = yaml.load(result.get('config.json').content) as any;
                     config.syncConfig = selfConfig;
                     this.config.writeRaw(yaml.dump(config));
                 }
 
                 if (result.has('ssh.auth.json')) {
-                    await this.saveSSHPluginAllPasswordInfos(JSON.parse(result.get('ssh.auth.json').value) as Connection[], token);
+                    await this.saveSSHPluginAllPasswordInfos(JSON.parse(result.get('ssh.auth.json').content) as Connection[], token);
                 }
 
             }
@@ -125,11 +124,7 @@ export class SyncConfigSettingsTabComponent implements OnInit {
     }
 
     viewGist(): void {
-        if (this.config.store.syncConfig.type === 'GitHub') {
-            this.platform.openExternal('https://gist.github.com/' + this.config.store.syncConfig.gist)
-        } else if (this.config.store.syncConfig.type === 'GitLab') {
-            this.platform.openExternal(this.config.store.syncConfig.baseUrl + '/-/snippets/' + this.config.store.syncConfig.gist)
-        }
+        this.platform.openExternal(this.config.store.syncConfig.baseUrl + '/' + this.config.store.syncConfig.gist);
     }
 
     async saveSSHPluginAllPasswordInfos(conns: Connection[], token: string) {

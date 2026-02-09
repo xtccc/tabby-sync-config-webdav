@@ -15,6 +15,8 @@
     "noUnusedLocals": false,
     "declaration": true,
     "declarationDir": "dist",
+    "skipLibCheck": true,
+    "types": [],
     "lib": [
       "dom",
       "es2015",

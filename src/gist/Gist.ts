@@ -17,13 +17,13 @@ class GistFile {
     readonly name: string;
 
     /**
-    * gist file content
-    */
-    readonly value: string;
+     * gist file content
+     */
+    readonly content: string;
 
-    constructor(name: string, value: string) {
+    constructor(name: string, content: string) {
         this.name = name;
-        this.value = value;
+        this.content = content;
     }
 }
 
@@ -87,7 +87,7 @@ abstract class Gist {
 
         for (const gist of gists) {
             files[gist.name] = {
-                content: gist.value
+                content: gist.content
             };
         }
 

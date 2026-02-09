@@ -1,9 +1,9 @@
 const path = require('path')
-const CleanWebpackPlugin = require('clean-webpack-plugin')
+const { CleanWebpackPlugin } = require('clean-webpack-plugin')
 
 module.exports = {
   target: 'node',
-  entry: 'src/index.ts',
+  entry: './src/index.ts',
   devtool: 'source-map',
   context: __dirname,
   mode: 'development',
@@ -30,7 +30,7 @@ module.exports = {
       {
         test: /\.scss$/,
         exclude: [/node_modules/, /\.global\.scss$/],
-        use: ['to-string-loader', 'style-loader', 'css-loader', 'sass-loader'],
+        use: ['to-string-loader', 'css-loader', 'sass-loader'],
       },
       { test: /\.pug$/, use: ['apply-loader', 'pug-loader'] },
     ]
@@ -45,6 +45,6 @@ module.exports = {
     /^terminus-/,
   ],
   plugins: [
-    new CleanWebpackPlugin(['dist'])
+    new CleanWebpackPlugin()
   ]
 }
