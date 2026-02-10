@@ -75,6 +75,11 @@ export class SyncConfigSettingsTabComponent implements OnInit {
                 // no sync self
                 delete store.syncConfig;
 
+                // no sync default terminal profile
+                if (store.terminal) {
+                    delete store.terminal.profile;
+                }
+
                 // config file
                 files.push(new GistFile('config.yaml', yaml.dump(store)));
 
@@ -90,12 +95,28 @@ export class SyncConfigSettingsTabComponent implements OnInit {
                 if (result.has('config.yaml')) {
                     const config = yaml.load(result.get('config.yaml').content) as any;
                     config.syncConfig = selfConfig;
+
+                    // preserve local default terminal profile
+                    const localStore = yaml.load(this.config.readRaw()) as any;
+                    if (localStore?.terminal?.profile !== undefined) {
+                        config.terminal = config.terminal || {};
+                        config.terminal.profile = localStore.terminal.profile;
+                    }
+
                     this.config.writeRaw(yaml.dump(config));
                 }
                 // Maintain a check for `config.json` for backwards-compatibility.
                 else if (result.has('config.json')) {
                     const config = yaml.load(result.get('config.json').content) as any;
                     config.syncConfig = selfConfig;
+
+                    // preserve local default terminal profile
+                    const localStore = yaml.load(this.config.readRaw()) as any;
+                    if (localStore?.terminal?.profile !== undefined) {
+                        config.terminal = config.terminal || {};
+                        config.terminal.profile = localStore.terminal.profile;
+                    }
+
                     this.config.writeRaw(yaml.dump(config));
                 }
 
